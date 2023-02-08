@@ -81,19 +81,19 @@ class ebay_scraper_no_selenium(scrapy.Spider):
             if href:
 
                 ### test ####
-                href = "https://www.ebay.com/itm/354148851974"
+                # href = "https://www.ebay.com/itm/294896500370"
                 #####################
 
                 yield Request(href, callback=self.parseProduct)
 
-                break
+                # break
 
         ########### test ############
-        # next_url = response.xpath('//a[@type="next"]/@href').extract_first()
-        # if not next_url:
-        #     next_url = response.xpath('//a[@aria-label="Next page of results"]/@href').extract_first()
-        # if next_url:
-        #     yield Request(next_url, callback=self.parseProductList, meta={"main": True})
+        next_url = response.xpath('//a[@type="next"]/@href').extract_first()
+        if not next_url:
+            next_url = response.xpath('//a[@aria-label="Next page of results"]/@href').extract_first()
+        if next_url:
+            yield Request(next_url, callback=self.parseProductList, meta={"main": True})
         ################################
 
     def parseProduct(self, response):
@@ -209,6 +209,27 @@ class ebay_scraper_no_selenium(scrapy.Spider):
         if returns:
             returns = returns[: len(returns) - 1]
         itemdata_json["Returns"] = " ".join(returns)
+        itemdata_json["Description"] = response.xpath('//meta[@name="description"]/@content').extract_first()
+
+        specs = response.xpath('//div[@class="vim x-about-this-item"]//div[@class="ux-layout-section__row"] | //div[@class="vim x-product-details"]//div[@class="ux-layout-section__row"]')
+        for spec in specs:
+            labels = spec.xpath('.//div[contains(@class, "ux-labels-values__labels")]//span/text()').extract()
+            values = spec.xpath('.//div[contains(@class, "ux-labels-values__values")]//span/text()').extract()
+            i = 0
+            for name in labels:
+                if len(values) < i + 1:
+                    continue
+                value = values[i]
+                if "Item Depth" in name:
+                    itemdata_json["Depth"] = value
+                elif "Item Height" in name:
+                    itemdata_json["Height"] = value
+                elif "Item Weight" in name:
+                    itemdata_json["Weight"] = value
+                elif "Item Width" in name:
+                    itemdata_json["Width"] = value
+
+                i += 1
 
         images = response.xpath('//div[@id="vi_main_img_fs"]//img/@src').extract()
         i = 0
@@ -225,10 +246,8 @@ class ebay_scraper_no_selenium(scrapy.Spider):
     def parseIframe(self, response):
         itemdata_json = response.meta["item"]
 
-        seller_notes_data = response.xpath('//div[@id="ds_div"]/font//text() | //div[@id="ds_div"]/font/div/text() | //div[@id="ds_div"]/font/div/i/text()').extract()
+        seller_notes_data = response.xpath('//div[@id="ds_div"]//text() | //div[@id="ds_div"]/font/div/text() | //div[@id="ds_div"]/font/div/i/text()').extract()
         itemdata_json["seller_notes_data"] = "\n".join(seller_notes_data)
-
-        itemdata_json["Description"] = response.xpath('//meta[@name="description"]/@content').extract_first()
 
         specifications_tags = response.xpath('//div[@class="lft-flt specifications"]/div/table//td')
         if specifications_tags:
@@ -250,18 +269,22 @@ class ebay_scraper_no_selenium(scrapy.Spider):
                 i += 1
 
         else:
-            specifications_tags = response.xpath('//div[@class="lft-flt specifications"]/div/table//td')
+            specifications_tags = response.xpath('//div[@id="ds_div"]//table//tr')
             if specifications_tags:
-                i = 0
                 for specifications_tag in specifications_tags:
-                    if 'Dimensions - Depth' in specifications_tag:
-                        itemdata_json["Depth"] = specifications_tag.replace("Dimensions - Depth", '')
-                    elif 'Dimensions - Height' in specifications_tag:
-                        itemdata_json["Height"] = specifications_tag.replace("Dimensions - Height", '')
-                    elif 'Dimensions - Width' in specifications_tag:
-                        itemdata_json["Width"] = specifications_tag.replace("Dimensions - Width", '')
-                    elif 'Weight' in specifications_tag[:7]:
-                        itemdata_json["Weight"] = specifications_tag.replace("Weight", '')
+                    values = specifications_tag.xpath('./td/text()').extract()
+                    if len(values) < 2:
+                        continue
+                    name = values[0]
+                    value = values[1]
+                    if 'Depth' in name:
+                        itemdata_json["Depth"] = value
+                    elif 'Height' in name:
+                        itemdata_json["Height"] = value
+                    elif 'Width' in name:
+                        itemdata_json["Width"] = value
+                    elif 'Weight' in name:
+                        itemdata_json["Weight"] = value
 
         temps = response.xpath('//body/table//text()').extract()
         data = []
