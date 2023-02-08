@@ -1,7 +1,11 @@
-import scrapy, json, requests, random
 import csv
 from collections import OrderedDict
+
+import random
+import requests
+import scrapy
 from scrapy import Request
+
 
 class ebay_scraper_no_selenium(scrapy.Spider):
     name = "ebay_scraper"
@@ -25,14 +29,17 @@ class ebay_scraper_no_selenium(scrapy.Spider):
 
     total_items = []
 
-    fields = ["Url", "PartNumber", "Auction No", "Title", "Manufacturer", "UpcCode", "VendorNumber", "Description", "ListPrice",
-              "SalePrice", "Condition", "Seller Notes", "seller_notes_data", "Shipping", "Depth", "Height", "Weight", "Width", "VendorName", "Category",
+    fields = ["Url", "PartNumber", "Auction No", "Title", "Manufacturer", "UpcCode", "VendorNumber", "Description",
+              "ListPrice",
+              "SalePrice", "Condition", "Seller Notes", "seller_notes_data", "Shipping", "Depth", "Height", "Weight",
+              "Width", "VendorName", "Category",
               "Quantity", "Quantity Sold", "Returns", "Auction Body"]
     for i in range(20):
         fields.append("Image " + str(i + 1))
 
     headers = {
-        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,'
+                  'application/signed-exchange;v=b3;q=0.9',
         'sec-ch-ua': '"Google Chrome";v="87", " Not;A Brand";v="99", "Chromium";v="87"',
         'sec-ch-ua-mobile': '?0',
         'sec-fetch-dest': 'document',
@@ -40,7 +47,8 @@ class ebay_scraper_no_selenium(scrapy.Spider):
         'sec-fetch-site': 'none',
         'sec-fetch-user': '?1',
         'upgrade-insecure-requests': '1',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36'
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/87.0.4280.141 Safari/537.36 '
     }
 
     # get proxies from free proxy site
@@ -66,7 +74,6 @@ class ebay_scraper_no_selenium(scrapy.Spider):
     # 	for cat_url in categories:
     # 		yield Request(cat_url, callback=self.parseCat, meta={"CatURL": cat_url, 'page_num':1})
 
-
     def parseProductList(self, response):
         see_all_btn = response.xpath('//a[text()="See All"]/@href').extract_first()
         if see_all_btn:
@@ -79,7 +86,6 @@ class ebay_scraper_no_selenium(scrapy.Spider):
         for product in product_list:
             href = product.xpath('.//div[@class="s-item__image"]/a/@href').extract_first()
             if href:
-
                 ### test ####
                 # href = "https://www.ebay.com/itm/294896500370"
                 #####################
@@ -106,7 +112,8 @@ class ebay_scraper_no_selenium(scrapy.Spider):
 
         itemdata_json["Url"] = response.url
 
-        itemdata_json["PartNumber"] = response.xpath('//div[@id="viTabs_0_is"]//span[@itemprop="mpn"]/div/span/text()').extract_first()
+        itemdata_json["PartNumber"] = response.xpath(
+            '//div[@id="viTabs_0_is"]//span[@itemprop="mpn"]/div/span/text()').extract_first()
         itemdata_json["Auction No"] = response.url.split("?")[0].split("/")[-1]
         itemdata_json["Title"] = response.xpath('//h1[@class="x-item-title__mainTitle"]/span/text()').extract_first()
         itemdata_json["Manufacturer"] = response.xpath(
@@ -200,18 +207,21 @@ class ebay_scraper_no_selenium(scrapy.Spider):
             qty_sold = 0
         itemdata_json["Quantity Sold"] = qty_sold
 
-        vendor_name = response.xpath('//div[@class="vim d-shipping-minview"]//div[@class="ux-labels-values__values-content"]/div[3]/span/text()').extract_first()
+        vendor_name = response.xpath('//div[@class="vim d-shipping-minview"]//div['
+                                     '@class="ux-labels-values__values-content"]/div[3]/span/text()').extract_first()
         if vendor_name:
             vendor_name = vendor_name.replace('Located in: ', "")
         itemdata_json["VendorName"] = vendor_name
 
-        returns = response.xpath('//div[@class="vim x-returns-minview"]//div[@class="ux-labels-values__values-content"]/div/span/text()').extract()
+        returns = response.xpath('//div[@class="vim x-returns-minview"]//div['
+                                 '@class="ux-labels-values__values-content"]/div/span/text()').extract()
         if returns:
             returns = returns[: len(returns) - 1]
         itemdata_json["Returns"] = " ".join(returns)
         itemdata_json["Description"] = response.xpath('//meta[@name="description"]/@content').extract_first()
 
-        specs = response.xpath('//div[@class="vim x-about-this-item"]//div[@class="ux-layout-section__row"] | //div[@class="vim x-product-details"]//div[@class="ux-layout-section__row"]')
+        specs = response.xpath('//div[@class="vim x-about-this-item"]//div[@class="ux-layout-section__row"] | //div['
+                               '@class="vim x-product-details"]//div[@class="ux-layout-section__row"]')
         for spec in specs:
             labels = spec.xpath('.//div[contains(@class, "ux-labels-values__labels")]//span/text()').extract()
             values = spec.xpath('.//div[contains(@class, "ux-labels-values__values")]//span/text()').extract()
@@ -246,7 +256,8 @@ class ebay_scraper_no_selenium(scrapy.Spider):
     def parseIframe(self, response):
         itemdata_json = response.meta["item"]
 
-        seller_notes_data = response.xpath('//div[@id="ds_div"]//text() | //div[@id="ds_div"]/font/div/text() | //div[@id="ds_div"]/font/div/i/text()').extract()
+        seller_notes_data = response.xpath('//div[@id="ds_div"]//text() | //div[@id="ds_div"]/font/div/text() | '
+                                           '//div[@id="ds_div"]/font/div/i/text()').extract()
         itemdata_json["seller_notes_data"] = "\n".join(seller_notes_data)
 
         specifications_tags = response.xpath('//div[@class="lft-flt specifications"]/div/table//td')
@@ -297,8 +308,8 @@ class ebay_scraper_no_selenium(scrapy.Spider):
         self.total_items.append(itemdata_json)
 
         self.total_count += 1
-        print('\n##################################\ntotal count: ' + str(self.total_count) + '\n##################################\n')
-
+        print('\n##################################\ntotal count: ' + str(
+            self.total_count) + '\n##################################\n')
 
     def errCall(self, response):
         # try:
@@ -325,9 +336,9 @@ class ebay_scraper_no_selenium(scrapy.Spider):
 
         self.proxy = random.choice(self.list_proxy)
         # response.request.meta['proxy'] = proxy
-        print ('err proxy: ' + self.proxy)
+        print('err proxy: ' + self.proxy)
         response.request.meta['proxy'] = self.proxy
-        if not 'errpg' in response.request.url:
+        if 'errpg' not in response.request.url:
             yield Request(response.request.url,
                           callback=self.parse,
                           headers=self.headers,
