@@ -87,7 +87,7 @@ class ebay_scraper_no_selenium(scrapy.Spider):
             href = product.xpath('.//div[@class="s-item__image"]/a/@href').extract_first()
             if href:
                 ### test ####
-                # href = "https://www.ebay.com/itm/294896500370"
+                # href = "https://www.ebay.com/itm/403961588217"
                 #####################
 
                 yield Request(href, callback=self.parseProduct)
@@ -190,7 +190,7 @@ class ebay_scraper_no_selenium(scrapy.Spider):
         if qty:
             qty = qty[0].replace(",", "")
         else:
-            if response.xpath('//div[@class="vim x-bin-action vim-flex-cta"]'):
+            if response.xpath('//div[contains(@class, "vim x-bin-action vim-flex-cta")]'):
                 qty = 3
             else:
                 qty = 0
@@ -260,43 +260,6 @@ class ebay_scraper_no_selenium(scrapy.Spider):
                                            '//div[@id="ds_div"]/font/div/i/text()').extract()
         itemdata_json["seller_notes_data"] = "\n".join(seller_notes_data)
 
-        specifications_tags = response.xpath('//div[@class="lft-flt specifications"]/div/table//td')
-        if specifications_tags:
-            i = 0
-            for specifications_tag in specifications_tags:
-                if len(specifications_tags) > i + 1 and (i % 2 == 0):
-                    name = specifications_tag.xpath('./b/text()').extract_first()
-                    if not name:
-                        continue
-                    value = specifications_tags[i + 1].xpath('./text()').extract_first()
-                    if "Product Depth" in name:
-                        itemdata_json["Depth"] = value
-                    elif "Product Height" in name:
-                        itemdata_json["Height"] = value
-                    elif "Product Weight" in name:
-                        itemdata_json["Weight"] = value
-                    elif "Product Width" in name:
-                        itemdata_json["Width"] = value
-                i += 1
-
-        else:
-            specifications_tags = response.xpath('//div[@id="ds_div"]//table//tr')
-            if specifications_tags:
-                for specifications_tag in specifications_tags:
-                    values = specifications_tag.xpath('./td/text()').extract()
-                    if len(values) < 2:
-                        continue
-                    name = values[0]
-                    value = values[1]
-                    if 'Depth' in name:
-                        itemdata_json["Depth"] = value
-                    elif 'Height' in name:
-                        itemdata_json["Height"] = value
-                    elif 'Width' in name:
-                        itemdata_json["Width"] = value
-                    elif 'Weight' in name:
-                        itemdata_json["Weight"] = value
-
         temps = response.xpath('//body/table//text()').extract()
         data = []
         for t in temps:
@@ -304,6 +267,15 @@ class ebay_scraper_no_selenium(scrapy.Spider):
             if not t:
                 continue
             data.append(t)
+
+            if 'Depth: ' in t and (not itemdata_json["Depth"]):
+                itemdata_json["Depth"] = t.split("Depth: ")[-1]
+            elif 'Height: ' in t and (not itemdata_json["Height"]):
+                itemdata_json["Height"] = t.split("Height: ")[-1]
+            elif 'Width: ' in t and (not itemdata_json["Width"]):
+                itemdata_json["Width"] = t.split("Width: ")[-1]
+            elif 'Weight: ' in t and (not itemdata_json["Weight"]):
+                itemdata_json["Weight"] = t.split("Weight: ")[-1]
         itemdata_json["Auction Body"] = "\n".join(data)
         self.total_items.append(itemdata_json)
 
